@@ -12,10 +12,12 @@ A new flutter plugin project.
   s.homepage         = 'http://example.com'
   s.license          = { :file => '../LICENSE' }
   s.author           = { 'Vivek Kaushal' => '' }
+  s.resources        = 'Assets/**/*'
   s.source           = { :path => '.' }
   s.source_files = 'Classes/**/*'
   s.dependency 'Flutter'
-  s.platform = :ios, '15.6'
+  s.dependency 'WeScan'
+  s.platform = :ios, '16'
 
   # Flutter.framework does not contain a i386 slice.
   s.pod_target_xcconfig = { 'DEFINES_MODULE' => 'YES', 'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'i386' }

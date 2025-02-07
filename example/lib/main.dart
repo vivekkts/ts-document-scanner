@@ -1,8 +1,9 @@
 import 'dart:io';
+import 'package:document_scanner_example/sample.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:document_scanner/document_scanner.dart';
-
+import 'package:flutter_pdfview/flutter_pdfview.dart';
 
 void main() {
   runApp(const MyApp());
@@ -17,6 +18,7 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   List<String> _pictures = [];
+  String _pdfPath = "";
 
   @override
   void initState() {
@@ -41,7 +43,7 @@ class _MyAppState extends State<MyApp> {
                 onPressed: onPressed, child: const Text("Add Pictures")),
             ElevatedButton(
                 onPressed: onSelectPicturesSelect, child: const Text("Select Pictures")),
-            for (var picture in _pictures) Image.file(File(picture))
+            for (var picture in _pictures) Image.file(File(picture)),
           ],
         )),
       ),
@@ -52,13 +54,22 @@ class _MyAppState extends State<MyApp> {
     List<String> pictures;
     try {
       pictures = await DocumentScanner.selectDocuments(noOfPages: 15) ?? [];
-      
+      print("PICTURES $pictures");
       if (!mounted) return;
+      print("MOUNTED");
+            
       setState(() {
         _pictures = pictures;
       });
+      
+      // print("NAVIGATE");
+      // Navigator.push(
+      //   context,
+      //   MaterialPageRoute(builder: (context) => DocumentScannerScreen()),
+      // );
     } catch (exception) {
       // Handle exception here
+      print("EXCEPTION: $exception");
     }
   }
 
@@ -66,7 +77,7 @@ class _MyAppState extends State<MyApp> {
     List<String> pictures;
     try {
       pictures = await DocumentScanner.getPictures(noOfPages: 15, isGalleryImportAllowed: true) ?? [];
-      
+      print(pictures);
       if (!mounted) return;
       setState(() {
         _pictures = pictures;
