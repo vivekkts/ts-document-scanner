@@ -2,10 +2,13 @@ import SwiftUI
 import WeScan
 
 struct DocumentScannerPreviewView: View {
+    var imageName: String = ""
+    
     @Binding var image: UIImage?
     @Binding var quad: Quadrilateral?
+    
     var isEditing: Bool = false
-    var onImageEdited: ((UIImage, UIImage, Quadrilateral?) -> Void)?
+    var onImageEdited: ((String, UIImage, UIImage, Quadrilateral?) -> Void)?
     var onDismiss: (() -> Void)?
     
     @Environment(\.dismiss) private var dismiss
@@ -14,9 +17,31 @@ struct DocumentScannerPreviewView: View {
         NavigationView {
             GeometryReader { geometry in
                 VStack {
+                    HStack {
+                        Text(imageName)
+                            .font(.title3)
+                            .foregroundStyle(.white)
+
+                        Button(action: {
+                            
+                        }) {
+                            Image(systemName: "pencil.line")
+                                .font(.system(size: 18, weight: .bold))
+                                .foregroundColor(.white)
+                        }
+                    }
+                    .overlay(
+                        Rectangle()
+                            .frame(height: 1)
+                            .offset(y: 4)
+                            
+                        , alignment: .bottom
+                    )
+                    .foregroundStyle(.white)
+                    
                     EditImageViewControllerWrapper(image: $image, quad: $quad, onCropped: { editedImage, quad in
                         if let originalImage = image, let onImageEdited = onImageEdited {
-                            onImageEdited(originalImage, editedImage, quad)
+                            onImageEdited(imageName, originalImage, editedImage, quad)
                         }
                         if isEditing {
                             if let onDismiss = onDismiss {
@@ -31,10 +56,13 @@ struct DocumentScannerPreviewView: View {
                     actionControls(geometry: geometry) {
                         NotificationCenter.default.post(name: .cropImage, object: nil)
                     }
+                    Spacer()
                 }
                 .background(Color.black)
+                .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity, alignment: .top)
+                
             }
-            .navigationBarTitle("Crop & Rotate", displayMode: .inline)
+            .navigationBarBackButtonHidden(true)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button(action: {
@@ -44,11 +72,19 @@ struct DocumentScannerPreviewView: View {
                         dismiss()
                     }) {
                         Image(systemName: "xmark")
+                            .font(.system(size: 18, weight: .bold))
                             .foregroundColor(.white)
                     }
                 }
+                
+                ToolbarItem(placement: .principal) {
+                    Text("Crop & Rotate")
+                        .font(.title2)
+                        .foregroundStyle(.white)
+                }
             }
         }
+        .navigationBarBackButtonHidden()
     }
     
     private func actionControls(geometry: GeometryProxy, action: @escaping () -> Void) -> some View {
