@@ -2,8 +2,6 @@ import SwiftUI
 import WeScan
 
 struct DocumentScannerCameraView: View {
-    var imageName: String?
-    
     @State private var showImageEditor = false
     @State private var capturedImage: UIImage?
     @State private var capturedQuad: Quadrilateral?
@@ -79,11 +77,10 @@ struct DocumentScannerCameraView: View {
             .background(.black)
             .navigationDestination(isPresented: $showImageEditor) {
                 DocumentScannerPreviewView(
-                    imageName: imageName ?? "",
                     image: $capturedImage,
                     quad: $capturedQuad
                 ) {
-                    name, originalImage, editedImage, quad in
+                    originalImage, editedImage, quad in
                     if let onImageCaptured = onImageCaptured {
                         onImageCaptured(originalImage, editedImage, quad)
                     }

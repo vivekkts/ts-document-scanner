@@ -96,3 +96,19 @@ class DocumentScanner {
     ).then((value) => value);
   }
 }
+
+/*
+// TODO: Can use this class to return name and pictures instead
+// of only pictures based on the following code base example:
+// https://api.flutter.dev/flutter/services/MethodChannel/invokeMethod.html 
+*/
+class DocumentResult {
+  DocumentResult(this.name, this.pictures);
+
+  final String name;
+  final List<String> pictures;
+
+  static DocumentResult fromJson(Map<String, Object?> json) {
+    return DocumentResult(json['name']! as String, json['pictures']! as List<String>);
+  }
+}

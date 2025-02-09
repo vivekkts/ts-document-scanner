@@ -4,32 +4,32 @@ import Foundation
 
 
 struct ScannedImage {
-    var name: String
     var originalImage: UIImage?
     var croppedImage: UIImage?
     var quad: Quadrilateral?
     var originalImagePath: String?
     var croppedImagePath: String?
     
-    init(name: String, originalImage: UIImage, croppedImage: UIImage? = nil, quad: Quadrilateral? = nil) {
+    init(originalImage: UIImage, croppedImage: UIImage? = nil, quad: Quadrilateral? = nil) {
         
         let unixTimestamp = String(Int(Date().timeIntervalSince1970))
         
-        self.name = name
         self.originalImage = originalImage
         self.croppedImage = croppedImage
         self.quad = quad
-        self.originalImagePath = originalImage.saveToTempDirectory(withName: name + "_original_" + unixTimestamp + ".jpg")
+        self.originalImagePath = originalImage.saveToTempDirectory(withName: "scanned_" + unixTimestamp + "_original.jpg")
         if let croppedImage = croppedImage {
-            self.croppedImagePath = croppedImage.saveToTempDirectory(withName: name + "_crop_" + unixTimestamp + ".jpg")
+            self.croppedImagePath = croppedImage.saveToTempDirectory(withName: "scanned_" + unixTimestamp + "crop.jpg")
         }
     }
 }
 
 struct DocumentScannerHome: View {
+    @State private var name: String = ""
+    @State private var openNameChangeAlert: Bool = false
     @State private var selectedImage: UIImage?
     @State private var images: [ScannedImage] = [
-//        ScannedImage(originalImage: UIImage(imageLiteralResourceName: "IMG_9133"))
+        // ScannedImage(originalImage: UIImage(imageLiteralResourceName: "IMG_9133"))
     ]
     @State private var selectedIndex: Int = 0
     @State private var showCamera: Bool = false
@@ -66,7 +66,7 @@ struct DocumentScannerHome: View {
                 Button("Done") {
                     
                     if let onSave = onSave {
-                        onSave(images.map(\.croppedImagePath!))
+                        onSave(images.compactMap { $0.croppedImagePath ?? $0.originalImagePath })
                     }
                     dismiss()
                 }
@@ -77,23 +77,44 @@ struct DocumentScannerHome: View {
                     .cornerRadius(32)
                     .frame(alignment: .trailing)
             }
-            .padding(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+            .padding(EdgeInsets(top: 0, leading: 16, bottom: 8, trailing: 16))
             .background(Color.gray.opacity(0.2))
             .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 2)
             
             
             if images.count > 0 {
+                // TODO: Rename
+//                Button(action: {
+//                    openNameChangeAlert.toggle()
+//                }) {
+//                    Text(name)
+//                        .font(.title2)
+//                        .foregroundStyle(.white)
+//                    Image(systemName: "highlighter")
+//                        .font(.system(size: 18, weight: .bold))
+//                        .foregroundColor(.white)
+//                }
+//                .padding()
+//                .alert("Rename", isPresented: $openNameChangeAlert) {
+//                    TextField("Document Name", text: $name)
+//                    Button("OK", action: {
+//                        openNameChangeAlert.toggle()
+//                    })
+//                    Button("Cancel", role: .cancel) { }
+//                } message: {
+//                    Text("Enter a name for the document")
+//                }
+                
                 // Main Image List
                 TabView(selection: $selectedIndex) {
                     ForEach(images.indices, id: \.self) { index in
                         Image(uiImage: images[index].croppedImage ?? images[index].originalImage ?? UIImage())
                             .resizable()
                             .scaledToFit()
-                            .frame(maxWidth: .infinity, maxHeight: UIScreen.main.bounds.height * 0.7)
+                            .frame(maxWidth: .infinity, maxHeight: UIScreen.main.bounds.height * 0.65)
                             .tag(index)
                     }
                 }
-                .padding()
                 .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
                 .frame(height: UIScreen.main.bounds.height * 0.55)
                 
@@ -178,12 +199,10 @@ struct DocumentScannerHome: View {
             let filename = "Page_\(images.count + 1)"
             
             DocumentScannerCameraView(
-                imageName: filename,
                 onImageCaptured: {
                 originalImage, editedImage, quad in
                 
                 let scannedImage = ScannedImage(
-                    name: filename,
                     originalImage: originalImage,
                     croppedImage: editedImage,
                     quad: quad
@@ -197,15 +216,13 @@ struct DocumentScannerHome: View {
         // When "Crop & Rotate" is pressed
         .fullScreenCover(isPresented: $showImageEditor) {
             DocumentScannerPreviewView(
-                imageName: images[selectedIndex].name,
                 image: $images[selectedIndex].originalImage,
                 quad: $images[selectedIndex].quad,
                 isEditing: true
             ) {
-                    name, originalImage, editedImage, quad in
+                    originalImage, editedImage, quad in
                 
                 let scannedImage = ScannedImage(
-                    name: name,
                     originalImage: originalImage,
                     croppedImage: editedImage,
                     quad: quad
@@ -218,12 +235,10 @@ struct DocumentScannerHome: View {
             let filename = "Page_\(selectedIndex + 1)"
             
             DocumentScannerCameraView(
-                imageName: filename,
                 onImageCaptured: {
                 originalImage, editedImage, quad in
                 
                 let scannedImage = ScannedImage(
-                    name: filename,
                     originalImage: originalImage,
                     croppedImage: editedImage,
                     quad: quad
@@ -255,12 +270,10 @@ struct DocumentScannerHome: View {
         .fullScreenCover(isPresented: $hasSelectedImage) {
             let filename = "Page_\(reselectImage ? selectedIndex + 1 : images.count + 1)"
             DocumentScannerPreviewView(
-                imageName: filename,
                 image: $selectedImage, quad: .constant(nil), isEditing: true, onImageEdited: {
-                    name, originalImage, editedImage, quad in
+                    originalImage, editedImage, quad in
                 
                 let scannedImage = ScannedImage(
-                    name: name,
                     originalImage: originalImage,
                     croppedImage: editedImage,
                     quad: quad
@@ -284,6 +297,14 @@ struct DocumentScannerHome: View {
                 } else {
                     showCamera = true
                 }
+            }
+            
+            if self.name.isEmpty {
+                let currentDate = Date()
+                let formatter = DateFormatter()
+                formatter.dateFormat = "MMM-dd-HHmm"
+                
+                self.name = "Scanned_\(formatter.string(from: currentDate))"
             }
         }
     }

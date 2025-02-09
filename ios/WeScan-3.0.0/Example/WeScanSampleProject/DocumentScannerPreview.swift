@@ -2,13 +2,11 @@ import SwiftUI
 import WeScan
 
 struct DocumentScannerPreviewView: View {
-    var imageName: String = ""
-    
     @Binding var image: UIImage?
     @Binding var quad: Quadrilateral?
     
     var isEditing: Bool = false
-    var onImageEdited: ((String, UIImage, UIImage, Quadrilateral?) -> Void)?
+    var onImageEdited: ((UIImage, UIImage, Quadrilateral?) -> Void)?
     var onDismiss: (() -> Void)?
     
     @Environment(\.dismiss) private var dismiss
@@ -17,31 +15,9 @@ struct DocumentScannerPreviewView: View {
         NavigationView {
             GeometryReader { geometry in
                 VStack {
-                    HStack {
-                        Text(imageName)
-                            .font(.title3)
-                            .foregroundStyle(.white)
-
-                        Button(action: {
-                            
-                        }) {
-                            Image(systemName: "pencil.line")
-                                .font(.system(size: 18, weight: .bold))
-                                .foregroundColor(.white)
-                        }
-                    }
-                    .overlay(
-                        Rectangle()
-                            .frame(height: 1)
-                            .offset(y: 4)
-                            
-                        , alignment: .bottom
-                    )
-                    .foregroundStyle(.white)
-                    
                     EditImageViewControllerWrapper(image: $image, quad: $quad, onCropped: { editedImage, quad in
                         if let originalImage = image, let onImageEdited = onImageEdited {
-                            onImageEdited(imageName, originalImage, editedImage, quad)
+                            onImageEdited(originalImage, editedImage, quad)
                         }
                         if isEditing {
                             if let onDismiss = onDismiss {
