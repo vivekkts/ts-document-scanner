@@ -447,6 +447,10 @@ class DocumentScannerActivity : AppCompatActivity() {
         renameButton.setOnClickListener {
             showRenameDialog()
         }
+        // Add click listener for filenameTextView
+        filenameTextView.setOnClickListener {
+            showRenameDialog()
+        }
 
         val bottomNavigationView: BottomNavigationView = findViewById(R.id.bottom_navigation)
         bottomNavigationView.deselectAllItems()
@@ -800,34 +804,75 @@ class DocumentScannerActivity : AppCompatActivity() {
         cropDocumentAndFinishIntent()
     }
 
+//    private fun showRenameDialog() {
+//        val dialogView = layoutInflater.inflate(R.layout.dialog_rename, null)
+//        val editText = dialogView.findViewById<EditText>(R.id.edit_text_rename)
+//        editText.setText(fileName)
+//
+//        val dialog = AlertDialog.Builder(this)
+//            .setTitle("Rename Document")
+//            .setView(dialogView)
+//            .setPositiveButton("Rename") { dialogInterface, _ ->
+//                val newFilename = editText.text.toString().trim()
+//
+//                if (newFilename.isNotEmpty()) {
+//
+//                    fileName = newFilename
+//                    val filenameTextView: TextView = findViewById(
+//                        R.id.filename_text)
+//                    filenameTextView.text = shortenFileName(fileName);
+//                    updateUI()
+//                    dialogInterface.dismiss()
+//                } else {
+//                    Log.d("newfilename is empty ", "done");
+//                    editText.error = "Empty filename is not allowed"
+//                }
+//
+//            }
+//            .setNegativeButton("Cancel", null)
+//            .create()
+//
+//        dialog.show()
+//        dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(ContextCompat.getColor(this, R.color.colorPrimary))
+//
+//    }
+
     private fun showRenameDialog() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_rename, null)
         val editText = dialogView.findViewById<EditText>(R.id.edit_text_rename)
         editText.setText(fileName)
 
+        // Build the dialog but pass null for the click listener
         val dialog = AlertDialog.Builder(this)
             .setTitle("Rename Document")
             .setView(dialogView)
-            .setPositiveButton("Rename") { dialogInterface, _ ->
-                val newFilename = editText.text.toString().trim()
-
-                if (newFilename.isNotEmpty()) {
-                    fileName = newFilename
-                    val filenameTextView: TextView = findViewById(
-                        R.id.filename_text)
-                    filenameTextView.text = shortenFileName(fileName);
-                    updateUI()
-
-                }
+            .setPositiveButton("Rename", null)  // <-- No auto listener
+            .setNegativeButton("Cancel") { dialogInterface, _ ->
                 dialogInterface.dismiss()
             }
-            .setNegativeButton("Cancel", null)
             .create()
 
         dialog.show()
         dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(ContextCompat.getColor(this, R.color.colorPrimary))
 
+        // Now grab the 'Rename' button after showing the dialog
+        val positiveButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+        positiveButton.setOnClickListener {
+            val newFilename = editText.text.toString().trim()
+            if (newFilename.isEmpty()) {
+                // Show error, don't dismiss
+                editText.error = "Empty filename is not allowed"
+            } else {
+                // Valid filename, update and dismiss
+                fileName = newFilename
+                val filenameTextView: TextView = findViewById(R.id.filename_text)
+                filenameTextView.text = shortenFileName(fileName)
+                updateUI()
+                dialog.dismiss()
+            }
+        }
     }
+
 
     /**
      * This gets called when a user presses the retake photo button. The user presses this in
