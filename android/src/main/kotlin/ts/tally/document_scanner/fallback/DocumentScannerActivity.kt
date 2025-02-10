@@ -133,7 +133,7 @@ class DocumentScannerActivity : AppCompatActivity() {
         this,
         onPhotoCaptureSuccess = {
             // user takes photo
-            documentPath ->
+                documentPath ->
 
             // if maxNumDocuments is 3 and this is the 3rd photo, hide the new photo button since
             // we reach the allowed limit
@@ -215,7 +215,7 @@ class DocumentScannerActivity : AppCompatActivity() {
     private val documentUtil = DocumentProviderUtil(
         this,
         onDocumentSelectSuccess = {
-            filePath -> openDocumentAfterSelection(filePath)
+                filePath -> openDocumentAfterSelection(filePath)
         },
         onCancelDocumentSelect = {
             if (documents.isEmpty()) {
@@ -340,11 +340,13 @@ class DocumentScannerActivity : AppCompatActivity() {
             if (cropLayout?.isVisible == true) {
                 // If the user is currently in cropping layout
                 Log.e("FROM ANDROID", "HANDLE BACK - Cropping Layout")
-                showCroppingLayout(false)
+
+                onClickCancel(true);
+                //   showCroppingLayout(false)
             } else {
                 // If the user is on the main screen
                 Log.e("FROM ANDROID", "HANDLE BACK - Main Screen")
-                onClickCancel()  // Call the function that shows the discard dialog
+                onClickCancel(false)  // Call the function that shows the discard dialog
             }
         }
     }
@@ -522,7 +524,7 @@ class DocumentScannerActivity : AppCompatActivity() {
 
         try {
             openDocumentProvider(DocumentScannerAction.ADD)
-            
+
         } catch (exception: Exception) {
             finishIntentWithError(
                 "error opening camera: ${exception.message}"
@@ -531,7 +533,7 @@ class DocumentScannerActivity : AppCompatActivity() {
     }
 
     private fun showCroppingLayout(show: Boolean) {
-        backCallback.isEnabled = documents.isNotEmpty()
+        //    backCallback.isEnabled = documents.isNotEmpty()
 
         previewLayout?.isVisible = !show
         cropLayout?.isVisible = show
@@ -886,14 +888,17 @@ class DocumentScannerActivity : AppCompatActivity() {
      * This gets called when a user doesn't want to complete the document scan after starting.
      * For example a user can quit out of the camera before snapping a photo of the document.
      */
-    private fun onClickCancel() {
+    private fun onClickCancel(croplayoutVisible:Boolean=false) {
         val alertBuilder = MaterialAlertDialogBuilder(this)
             .setTitle("Discard Document?")
             .setMessage("If you leave now, your progress will be lost")
-            .setPositiveButton("Discard", DialogInterface.OnClickListener { dialogInterface, i ->
-                setResult(Activity.RESULT_CANCELED)
-                finish()
-
+            .setPositiveButton("Discard", DialogInterface.OnClickListener { dialogInterface, i->
+                if(croplayoutVisible &&  documents.isNotEmpty()){
+                    showCroppingLayout(false);
+                } else {
+                    setResult(Activity.RESULT_CANCELED)
+                    finish()
+                }
                 dialogInterface.dismiss()
             })
             .setNegativeButton("Keep editing", DialogInterface.OnClickListener { dialogInterface, i ->
@@ -1045,7 +1050,7 @@ class DocumentScannerActivity : AppCompatActivity() {
                 if (document.croppedPhotoUri != null) {
                     Glide.with(context)
                         .load(document.croppedPhotoUri)
-                       // .override(imageSize, imageSize)
+                        // .override(imageSize, imageSize)
                         .into(binding.imageView)
                 } else {
                     Glide.with(context)
@@ -1120,7 +1125,7 @@ class DocumentScannerActivity : AppCompatActivity() {
 //                    binding.imageView.setStrokeWidthResource(R.dimen.thumbnail_stroke_width)
                     Log.e("add page","add page");
                     binding.addPageText.setText("Add page")
-                //    binding.addPageText.isVisible = true
+                    //    binding.addPageText.isVisible = true
                     binding.addPageText.setPadding(0, 5, 0, 0)
                     Log.e("From Android", "${binding.addPageText.isVisible}" );
                     binding.imageView.setOnClickListener {
