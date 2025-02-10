@@ -27,6 +27,7 @@ import androidx.core.text.htmlEncode
 import androidx.core.view.get
 import androidx.core.view.isVisible
 import androidx.core.view.setPadding
+import androidx.recyclerview.widget.LinearSnapHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
@@ -82,6 +83,8 @@ class DocumentScannerActivity : AppCompatActivity() {
      * @property importedFilePath path of the file to serve as starting file for document selector
      */
     private var importedFilePath : String? = null
+
+    private lateinit var thumbnailSnapHelper: LinearSnapHelper
 
     /**
      * @property croppedImageQuality the 0 - 100 quality of the cropped image
@@ -745,6 +748,20 @@ class DocumentScannerActivity : AppCompatActivity() {
         updateUI(selectedPosition)
 
         (binding.previewCarousel.layoutManager as CarouselLayoutManager).scrollToPosition(selectedPosition)
+        binding.thumbnailCarousel.smoothScrollToPosition(selectedPosition)
+
+        // Force a snap to center after scrolling (if necessary)
+        binding.thumbnailCarousel.post {
+            val layoutManager = binding.thumbnailCarousel.layoutManager as LinearLayoutManager
+            val snapView = thumbnailSnapHelper.findSnapView(layoutManager)
+            if (snapView != null) {
+                val position = layoutManager.getPosition(snapView)
+                if (position != focusedPosition) {
+                    // If the item is not centered, scroll again to ensure it snaps to the center
+                    binding.thumbnailCarousel.smoothScrollToPosition(focusedPosition)
+                }
+            }
+        }
 
         showCroppingLayout(false)
     }
@@ -958,6 +975,7 @@ class DocumentScannerActivity : AppCompatActivity() {
         // Attach a SnapHelper to center items
         val snapHelper = CarouselSnapHelper()
         snapHelper.attachToRecyclerView(binding.previewCarousel)
+       // snapHelper.attachToRecyclerView(binding.thumbnailCarousel)
 
         binding.previewCarousel.addOnScrollListener(object : RecyclerView.OnScrollListener() {
 
@@ -980,7 +998,22 @@ class DocumentScannerActivity : AppCompatActivity() {
     }
 
     fun scrollPreviewCarouselToPosition(position: Int) {
+        Log.e("From android","scrooloing")
         binding.previewCarousel.smoothScrollToPosition(position)
+        binding.thumbnailCarousel.smoothScrollToPosition(position)
+
+        focusedPosition=position
+        updateUI(position)
+    }
+
+
+    private fun updateSelectedThumbnail(selectedPosition: Int) {
+        // Update your global or UI state with the new selected position
+        focusedPosition = selectedPosition
+
+        // Optionally, do any UI update like highlighting the selected item
+        // You might notify the adapter so it can update each item's view accordingly:
+        (binding.thumbnailCarousel.adapter as ThumbnailCarouselAdapter).notifyDataSetChanged()
     }
 
     fun onPreviewCarouselScrolledToPosition(position: Int) {
@@ -992,18 +1025,26 @@ class DocumentScannerActivity : AppCompatActivity() {
         "${position+1}/${documents.count()}".also { pagerTextView.text = it }
 
         (binding.thumbnailCarousel.adapter as ThumbnailCarouselAdapter).notifyDataSetChanged()
+        binding.thumbnailCarousel.smoothScrollToPosition(position)
     }
 
     // Set up the thumbnail carousel (Thumbnails with "+" button)
     private fun setUpThumbnailCarousel() {
-        val carouselLayoutManager = LinearLayoutManager(this@DocumentScannerActivity, RecyclerView.HORIZONTAL, false);
+
+
+        val layoutManager  = LinearLayoutManager(this@DocumentScannerActivity, RecyclerView.HORIZONTAL, false);
 //        carouselLayoutManager.carouselAlignment = CarouselLayoutManager.ALIGNMENT_CENTER
-        binding.thumbnailCarousel.layoutManager = carouselLayoutManager
+        binding.thumbnailCarousel.layoutManager = layoutManager
         binding.thumbnailCarousel.adapter = ThumbnailCarouselAdapter(this, documents)
 
-        // Attach a SnapHelper to center items
-//        val snapHelper = CarouselSnapHelper()
-//        snapHelper.attachToRecyclerView(binding.thumbnailCarousel)
+        thumbnailSnapHelper = LinearSnapHelper() // Use LinearSnapHelper for LinearLayoutManager
+        thumbnailSnapHelper.attachToRecyclerView(binding.thumbnailCarousel)
+
+        val screenWidth = resources.displayMetrics.widthPixels
+        val thumbnailWidth  = resources.getDimensionPixelSize(R.dimen.thumbnail_width)
+        val padding = (screenWidth - thumbnailWidth) / 2
+        binding.thumbnailCarousel.setPadding(padding, 0, padding, 0)
+        binding.thumbnailCarousel.clipToPadding = false
 
         binding.thumbnailCarousel.addOnScrollListener(object : RecyclerView.OnScrollListener() {
 
@@ -1011,8 +1052,22 @@ class DocumentScannerActivity : AppCompatActivity() {
                 super.onScrollStateChanged(recyclerView, newState)
 
                 if (newState == RecyclerView.SCROLL_STATE_IDLE) {
-                    Log.d("FROM ANDROID", "SCROLLED TO position")
-                    (recyclerView.adapter as ThumbnailCarouselAdapter).notifyDataSetChanged()
+
+                    val snapView = thumbnailSnapHelper.findSnapView(layoutManager) ?: return
+                    val position = layoutManager.getPosition(snapView)
+
+                    // Scroll the preview carousel to the same position
+                    scrollPreviewCarouselToPosition(position)
+//                    Log.d("FROM ANDROID", "SCROLLED TO position")
+//
+//                    val centerView = snapHelper.findSnapView(carouselLayoutManager)
+//                    centerView?.let {
+//                        val centeredPosition = carouselLayoutManager.getPosition(it)
+//                        // You can now use centeredPosition as your "selected" index
+//                        // For example, update your adapter or UI accordingly:
+//                        updateSelectedThumbnail(centeredPosition)
+//                    }
+//                    (recyclerView.adapter as ThumbnailCarouselAdapter).notifyDataSetChanged()
 //                    val snapView = snapHelper.findSnapView(layoutManager)
 //
 //                    if (snapView != null) {
@@ -1110,6 +1165,7 @@ class DocumentScannerActivity : AppCompatActivity() {
                     binding.imageView.setOnClickListener {
                         // Handle adding new image action
                         scrollPreviewCarouselToPosition(position)
+
                     }
                 } else {
                     Log.e("FROM ANDROID", "hhhh" + maxNumDocuments + " --> " + images.count());
@@ -1138,9 +1194,41 @@ class DocumentScannerActivity : AppCompatActivity() {
     }
 
     // Helper method to handle adding a new image
+//    private fun addNewImage() {
+//        // Logic for adding a new image (e.g., opening gallery or camera picker)
+//        Log.e("FROM ANDROID", "8")
+//        openDocumentProvider(DocumentScannerAction.ADD)
+//        Log.d("From android","${focusedPosition}")
+//        scrollPreviewCarouselToPosition(focusedPosition)
+//    }
     private fun addNewImage() {
         // Logic for adding a new image (e.g., opening gallery or camera picker)
-        Log.e("FROM ANDROID", "8")
+        Log.e("FROM ANDROID", "Adding new image")
         openDocumentProvider(DocumentScannerAction.ADD)
+
+//        // After adding the new image, update the focusedPosition to the last item
+//        focusedPosition = documents.size -1
+//
+//        Log.e("from Android","${focusedPosition}");
+//
+//        // Notify the adapter that the data has changed
+//        binding.thumbnailCarousel.adapter?.notifyDataSetChanged()
+//
+//
+//        // Scroll the thumbnail carousel to the newly added image
+//        binding.thumbnailCarousel.smoothScrollToPosition(focusedPosition)
+//
+//        // Force a snap to center after scrolling
+//        binding.thumbnailCarousel.post {
+//            val layoutManager = binding.thumbnailCarousel.layoutManager as LinearLayoutManager
+//            val snapView = thumbnailSnapHelper.findSnapView(layoutManager)
+//            if (snapView != null) {
+//                val position = layoutManager.getPosition(snapView)
+//                if (position != focusedPosition) {
+//                    // If the item is not centered, scroll again to ensure it snaps to the center
+//                    binding.thumbnailCarousel.smoothScrollToPosition(focusedPosition)
+//                }
+//            }
+//        }
     }
 }
