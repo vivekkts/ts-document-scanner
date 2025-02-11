@@ -4,6 +4,7 @@ import 'package:document_scanner/src/models/contour.dart';
 import 'package:document_scanner/src/models/filter_type.dart';
 import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter/foundation.dart';
 
 class DocumentScanner {
   static const MethodChannel _channel =
@@ -27,22 +28,41 @@ class DocumentScanner {
     return pictures?.map((e) => e as String).toList();
   }
 
-  static Future<List<String>?> selectDocuments(
+
+  static Future<Map<String, dynamic>?> selectDocuments(
       {int noOfPages = 100, List<String>? sharedFiles}) async {
-    Map<Permission, PermissionStatus> statuses = await [
-      Permission.photos,
-    ].request();
+    Map<Permission, PermissionStatus> statuses;
+
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      statuses = await [Permission.photos].request();
+    } else {
+      statuses = await [Permission.mediaLibrary].request();
+    }
+    
     if (statuses.containsValue(PermissionStatus.denied) ||
         statuses.containsValue(PermissionStatus.permanentlyDenied)) {
       throw Exception("Permission not granted");
     }
+    try {
 
-    final List<dynamic>? pictures = await _channel.invokeMethod('selectDocuments', {
-      'noOfPages': noOfPages,
-      'sharedFiles': sharedFiles
-    });
-    return pictures?.map((e) => e as String).toList();
+      final result = await _channel.invokeMethod('selectDocuments', {
+        'noOfPages': noOfPages,
+        'sharedFiles': sharedFiles
+      });
+
+      if (result != null && result is Map) {
+        final croppedImageResults = List<String>.from(result['croppedImageResults'] ?? []);
+        final filename = result['filename'] ?? '';
+
+        return {'croppedImageResults': croppedImageResults, 'filename': filename};
+      }
+      return null;
+    } on PlatformException catch (e) {
+      print("Error: ${e.message}");
+      return null;
+    }
   }
+
 
   static Future<Contour?> findContourPhoto({
     required Uint8List byteData,
