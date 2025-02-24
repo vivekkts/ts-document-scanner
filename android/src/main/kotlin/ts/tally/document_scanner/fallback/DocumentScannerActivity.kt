@@ -248,7 +248,10 @@ class DocumentScannerActivity : AppCompatActivity() {
             filePath?.let { results.add(it) }
             setResult(
                 Activity.RESULT_OK,
-                Intent().putExtra("croppedImageResults", results)
+                Intent().apply{
+                    putExtra("croppedImageResults", results)
+                    putExtra("filename", filename)
+                }
             )
             finish()
             return
