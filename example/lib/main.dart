@@ -1,9 +1,7 @@
 import 'dart:io';
-import 'package:document_scanner_example/sample.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:document_scanner/document_scanner.dart';
-import 'package:flutter_pdfview/flutter_pdfview.dart';
 
 void main() {
   runApp(const MyApp());
@@ -18,7 +16,7 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   List<String> _pictures = [];
-  String _pdfPath = "";
+  String _filename = "";
 
   @override
   void initState() {
@@ -42,8 +40,17 @@ class _MyAppState extends State<MyApp> {
             ElevatedButton(
                 onPressed: onPressed, child: const Text("Add Pictures")),
             ElevatedButton(
-                onPressed: onSelectPicturesSelect, child: const Text("Select Pictures")),
-            for (var picture in _pictures) Image.file(File(picture)),
+                onPressed: onSelectPicturesSelect,
+                child: const Text("Select Pictures")),
+            if (_filename.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Text(
+                  'Filename: $_filename',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ),
+            for (var picture in _pictures) Image.file(File(picture))
           ],
         )),
       ),
@@ -51,33 +58,43 @@ class _MyAppState extends State<MyApp> {
   }
 
   void onSelectPicturesSelect() async {
-    List<String> pictures;
+    List<String> pictures = [];
+    String? filename;
+
     try {
-      pictures = await DocumentScanner.selectDocuments(noOfPages: 15) ?? [];
-      print("PICTURES $pictures");
-      if (!mounted) return;
-      print("MOUNTED");
-            
-      setState(() {
-        _pictures = pictures;
-      });
-      
-      // print("NAVIGATE");
-      // Navigator.push(
-      //   context,
-      //   MaterialPageRoute(builder: (context) => DocumentScannerScreen()),
-      // );
+      final result = await DocumentScanner.selectDocuments(noOfPages: 15);
+      print(result);
+
+      if (result != null) {
+        final pictures = result['croppedImageResults'] as List<String>;
+        final filename = result['filename'] as String;
+
+        print("Cropped images: $pictures");
+        print("Filename: $filename");
+
+        // Ensure widget is still mounted before calling setState
+        if (!mounted) return;
+
+        setState(() {
+          _pictures = pictures;
+          _filename = filename ?? '';
+        });
+      } else {
+        print("No documents selected");
+      }
     } catch (exception) {
       // Handle exception here
-      print("EXCEPTION: $exception");
+      print("Exception occurred: $exception");
     }
   }
 
   void onPressed() async {
     List<String> pictures;
     try {
-      pictures = await DocumentScanner.getPictures(noOfPages: 15, isGalleryImportAllowed: true) ?? [];
-      print(pictures);
+      pictures = await DocumentScanner.getPictures(
+              noOfPages: 15, isGalleryImportAllowed: true) ??
+          [];
+
       if (!mounted) return;
       setState(() {
         _pictures = pictures;

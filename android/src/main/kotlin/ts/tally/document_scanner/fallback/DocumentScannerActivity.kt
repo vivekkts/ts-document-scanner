@@ -7,13 +7,16 @@ import android.content.DialogInterface
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Matrix
+import android.icu.text.IDNA.Info
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.addCallback
 import androidx.appcompat.app.AppCompatActivity
@@ -24,6 +27,7 @@ import androidx.core.text.htmlEncode
 import androidx.core.view.get
 import androidx.core.view.isVisible
 import androidx.core.view.setPadding
+import androidx.recyclerview.widget.LinearSnapHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
@@ -58,6 +62,7 @@ import ts.tally.document_scanner.fallback.utils.DocumentUtil
 import ts.tally.document_scanner.fallback.utils.FileUtil
 import ts.tally.document_scanner.fallback.utils.ImageUtil
 import java.io.File
+import androidx.appcompat.app.AlertDialog
 
 
 /**
@@ -78,6 +83,8 @@ class DocumentScannerActivity : AppCompatActivity() {
      * @property importedFilePath path of the file to serve as starting file for document selector
      */
     private var importedFilePath : String? = null
+
+    private lateinit var thumbnailSnapHelper: LinearSnapHelper
 
     /**
      * @property croppedImageQuality the 0 - 100 quality of the cropped image
@@ -108,6 +115,10 @@ class DocumentScannerActivity : AppCompatActivity() {
 
     private lateinit var pagerTextView : TextView
 
+    fun shortenFileName(filename: String, maxLength: Int = 20): String {
+        return if (filename.length > maxLength) filename.take(maxLength) + "..." else filename
+    }
+
 
     // Sample list of image URLs or resource IDs
     private val selectedImages: List<String> = listOf(
@@ -125,7 +136,7 @@ class DocumentScannerActivity : AppCompatActivity() {
         this,
         onPhotoCaptureSuccess = {
             // user takes photo
-            documentPath ->
+                documentPath ->
 
             // if maxNumDocuments is 3 and this is the 3rd photo, hide the new photo button since
             // we reach the allowed limit
@@ -161,8 +172,6 @@ class DocumentScannerActivity : AppCompatActivity() {
             }
 
             document = Document(documentPath, null, photo.width, photo.height, corners)
-
-
             // user is allowed to move corners to make corrections
             try {
                 // set preview image height based off of photo dimensions
@@ -203,12 +212,13 @@ class DocumentScannerActivity : AppCompatActivity() {
     private lateinit var imageView: ImageCropView
     private var selectedPosition : Int = 0
     private var focusedPosition : Int = 0
+    private var fileName : String = ""
 
     @SuppressLint("NotifyDataSetChanged")
     private val documentUtil = DocumentProviderUtil(
         this,
         onDocumentSelectSuccess = {
-            filePath -> openDocumentAfterSelection(filePath)
+                filePath -> openDocumentAfterSelection(filePath)
         },
         onCancelDocumentSelect = {
             if (documents.isEmpty()) {
@@ -219,13 +229,29 @@ class DocumentScannerActivity : AppCompatActivity() {
     )
 
     private fun openDocumentAfterSelection(filePath: String?) {
-        Log.e("FROM ANDROID", "openDocumentAfterSelection " + filePath);
+        Log.d("FROM ANDROID", "openDocumentAfterSelection " + filePath);
+
+        if(fileName.isEmpty()){
+            Log.e("FROM ANDROID", "FileName empty $fileName");
+
+            fileName = File(filePath ?: "").nameWithoutExtension
+
+            val filenameTextView: TextView = findViewById(R.id.filename_text)
+            filenameTextView.text = shortenFileName(fileName)
+        }
+        updateUI()
+
         if (FileUtil().getMimeType(filePath) == "application/pdf") {
+
+            Log.d("pdf", "pdf")
             val results = arrayListOf<String>()
             filePath?.let { results.add(it) }
             setResult(
                 Activity.RESULT_OK,
-                Intent().putExtra("croppedImageResults", results)
+                Intent().apply{
+                    putExtra("croppedImageResults", results)
+                    putExtra("filename", filename)
+                }
             )
             finish()
             return
@@ -316,7 +342,18 @@ class DocumentScannerActivity : AppCompatActivity() {
         override fun handleOnBackPressed() {
             Log.e("FROM ANDROID", "HANDLE BACK")
 
-            showCroppingLayout(false)
+//            showCroppingLayout(false)
+            if (cropLayout?.isVisible == true) {
+                // If the user is currently in cropping layout
+                Log.e("FROM ANDROID", "HANDLE BACK - Cropping Layout")
+
+                onClickCancel(true);
+                //   showCroppingLayout(false)
+            } else {
+                // If the user is on the main screen
+                Log.e("FROM ANDROID", "HANDLE BACK - Main Screen")
+                onClickCancel(false)  // Call the function that shows the discard dialog
+            }
         }
     }
 
@@ -413,6 +450,16 @@ class DocumentScannerActivity : AppCompatActivity() {
             R.id.txt_pager
         )
 
+        val filenameTextView: TextView = findViewById(R.id.filename_text)
+        val renameButton: ImageButton = findViewById(R.id.rename_button)
+        renameButton.setOnClickListener {
+            showRenameDialog()
+        }
+        // Add click listener for filenameTextView
+        filenameTextView.setOnClickListener {
+            showRenameDialog()
+        }
+
         val bottomNavigationView: BottomNavigationView = findViewById(R.id.bottom_navigation)
         bottomNavigationView.deselectAllItems()
         bottomNavigationView.menu.get(1).title = "Reselect"
@@ -483,7 +530,7 @@ class DocumentScannerActivity : AppCompatActivity() {
 
         try {
             openDocumentProvider(DocumentScannerAction.ADD)
-            
+
         } catch (exception: Exception) {
             finishIntentWithError(
                 "error opening camera: ${exception.message}"
@@ -492,7 +539,7 @@ class DocumentScannerActivity : AppCompatActivity() {
     }
 
     private fun showCroppingLayout(show: Boolean) {
-        backCallback.isEnabled = show && documents.isNotEmpty()
+        //    backCallback.isEnabled = documents.isNotEmpty()
 
         previewLayout?.isVisible = !show
         cropLayout?.isVisible = show
@@ -621,6 +668,7 @@ class DocumentScannerActivity : AppCompatActivity() {
         document = null
         documentAction = actionType
         if (importedFilePath != null) {
+
             openDocumentAfterSelection(importedFilePath)
         } else {
             val documentProviderType = when {
@@ -703,6 +751,20 @@ class DocumentScannerActivity : AppCompatActivity() {
         updateUI(selectedPosition)
 
         (binding.previewCarousel.layoutManager as CarouselLayoutManager).scrollToPosition(selectedPosition)
+        binding.thumbnailCarousel.smoothScrollToPosition(selectedPosition)
+
+        // Force a snap to center after scrolling (if necessary)
+        binding.thumbnailCarousel.post {
+            val layoutManager = binding.thumbnailCarousel.layoutManager as LinearLayoutManager
+            val snapView = thumbnailSnapHelper.findSnapView(layoutManager)
+            if (snapView != null) {
+                val position = layoutManager.getPosition(snapView)
+                if (position != focusedPosition) {
+                    // If the item is not centered, scroll again to ensure it snaps to the center
+                    binding.thumbnailCarousel.smoothScrollToPosition(focusedPosition)
+                }
+            }
+        }
 
         showCroppingLayout(false)
     }
@@ -714,6 +776,7 @@ class DocumentScannerActivity : AppCompatActivity() {
             "${position+1}/${documents.count()}".also { pagerTextView.text = it }
 
             binding.previewCarousel.adapter?.notifyDataSetChanged()
+
             binding.thumbnailCarousel.adapter?.notifyDataSetChanged()
         } else {
             focusedPosition = when {
@@ -723,6 +786,7 @@ class DocumentScannerActivity : AppCompatActivity() {
             "${focusedPosition+1}/${documents.count()}".also { pagerTextView.text = it }
 
             binding.previewCarousel.adapter?.notifyDataSetChanged()
+
             binding.thumbnailCarousel.adapter?.notifyDataSetChanged()
         }
     }
@@ -762,6 +826,76 @@ class DocumentScannerActivity : AppCompatActivity() {
         cropDocumentAndFinishIntent()
     }
 
+//    private fun showRenameDialog() {
+//        val dialogView = layoutInflater.inflate(R.layout.dialog_rename, null)
+//        val editText = dialogView.findViewById<EditText>(R.id.edit_text_rename)
+//        editText.setText(fileName)
+//
+//        val dialog = AlertDialog.Builder(this)
+//            .setTitle("Rename Document")
+//            .setView(dialogView)
+//            .setPositiveButton("Rename") { dialogInterface, _ ->
+//                val newFilename = editText.text.toString().trim()
+//
+//                if (newFilename.isNotEmpty()) {
+//
+//                    fileName = newFilename
+//                    val filenameTextView: TextView = findViewById(
+//                        R.id.filename_text)
+//                    filenameTextView.text = shortenFileName(fileName);
+//                    updateUI()
+//                    dialogInterface.dismiss()
+//                } else {
+//                    Log.d("newfilename is empty ", "done");
+//                    editText.error = "Empty filename is not allowed"
+//                }
+//
+//            }
+//            .setNegativeButton("Cancel", null)
+//            .create()
+//
+//        dialog.show()
+//        dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(ContextCompat.getColor(this, R.color.colorPrimary))
+//
+//    }
+
+    private fun showRenameDialog() {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_rename, null)
+        val editText = dialogView.findViewById<EditText>(R.id.edit_text_rename)
+        editText.setText(fileName)
+
+        // Build the dialog but pass null for the click listener
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("Rename Document")
+            .setView(dialogView)
+            .setPositiveButton("Rename", null)  // <-- No auto listener
+            .setNegativeButton("Cancel") { dialogInterface, _ ->
+                dialogInterface.dismiss()
+            }
+            .create()
+
+        dialog.show()
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(ContextCompat.getColor(this, R.color.colorPrimary))
+
+        // Now grab the 'Rename' button after showing the dialog
+        val positiveButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+        positiveButton.setOnClickListener {
+            val newFilename = editText.text.toString().trim()
+            if (newFilename.isEmpty()) {
+                // Show error, don't dismiss
+                editText.error = "Empty filename is not allowed"
+            } else {
+                // Valid filename, update and dismiss
+                fileName = newFilename
+                val filenameTextView: TextView = findViewById(R.id.filename_text)
+                filenameTextView.text = shortenFileName(fileName)
+                updateUI()
+                dialog.dismiss()
+            }
+        }
+    }
+
+
     /**
      * This gets called when a user presses the retake photo button. The user presses this in
      * case the original document photo isn't good, and they need to take it again.
@@ -774,14 +908,17 @@ class DocumentScannerActivity : AppCompatActivity() {
      * This gets called when a user doesn't want to complete the document scan after starting.
      * For example a user can quit out of the camera before snapping a photo of the document.
      */
-    private fun onClickCancel() {
+    private fun onClickCancel(croplayoutVisible:Boolean=false) {
         val alertBuilder = MaterialAlertDialogBuilder(this)
             .setTitle("Discard Document?")
             .setMessage("If you leave now, your progress will be lost")
-            .setPositiveButton("Discard", DialogInterface.OnClickListener { dialogInterface, i ->
-                setResult(Activity.RESULT_CANCELED)
-                finish()
-
+            .setPositiveButton("Discard", DialogInterface.OnClickListener { dialogInterface, i->
+                if(croplayoutVisible &&  documents.isNotEmpty()){
+                    showCroppingLayout(false);
+                } else {
+                    setResult(Activity.RESULT_CANCELED)
+                    finish()
+                }
                 dialogInterface.dismiss()
             })
             .setNegativeButton("Keep editing", DialogInterface.OnClickListener { dialogInterface, i ->
@@ -804,12 +941,16 @@ class DocumentScannerActivity : AppCompatActivity() {
 
             document.croppedPhotoUri?.let { croppedImageResults.add(it) }
         }
+        Log.d("final output","$croppedImageResults");
+        Log.d("final output filename",fileName);
 
-        // return array of cropped document photo file paths
         setResult(
             Activity.RESULT_OK,
-            Intent().putExtra("croppedImageResults", croppedImageResults)
-        )
+            Intent().apply {
+                putExtra("croppedImageResults",croppedImageResults)
+                putExtra("filename",fileName)
+            }
+        );
         finish()
     }
 
@@ -837,6 +978,7 @@ class DocumentScannerActivity : AppCompatActivity() {
         // Attach a SnapHelper to center items
         val snapHelper = CarouselSnapHelper()
         snapHelper.attachToRecyclerView(binding.previewCarousel)
+       // snapHelper.attachToRecyclerView(binding.thumbnailCarousel)
 
         binding.previewCarousel.addOnScrollListener(object : RecyclerView.OnScrollListener() {
 
@@ -859,7 +1001,22 @@ class DocumentScannerActivity : AppCompatActivity() {
     }
 
     fun scrollPreviewCarouselToPosition(position: Int) {
+        Log.e("From android","scrooloing")
         binding.previewCarousel.smoothScrollToPosition(position)
+        binding.thumbnailCarousel.smoothScrollToPosition(position)
+
+        focusedPosition=position
+        updateUI(position)
+    }
+
+
+    private fun updateSelectedThumbnail(selectedPosition: Int) {
+        // Update your global or UI state with the new selected position
+        focusedPosition = selectedPosition
+
+        // Optionally, do any UI update like highlighting the selected item
+        // You might notify the adapter so it can update each item's view accordingly:
+        (binding.thumbnailCarousel.adapter as ThumbnailCarouselAdapter).notifyDataSetChanged()
     }
 
     fun onPreviewCarouselScrolledToPosition(position: Int) {
@@ -871,18 +1028,26 @@ class DocumentScannerActivity : AppCompatActivity() {
         "${position+1}/${documents.count()}".also { pagerTextView.text = it }
 
         (binding.thumbnailCarousel.adapter as ThumbnailCarouselAdapter).notifyDataSetChanged()
+        binding.thumbnailCarousel.smoothScrollToPosition(position)
     }
 
     // Set up the thumbnail carousel (Thumbnails with "+" button)
     private fun setUpThumbnailCarousel() {
-        val carouselLayoutManager = LinearLayoutManager(this@DocumentScannerActivity, RecyclerView.HORIZONTAL, false);
+
+
+        val layoutManager  = LinearLayoutManager(this@DocumentScannerActivity, RecyclerView.HORIZONTAL, false);
 //        carouselLayoutManager.carouselAlignment = CarouselLayoutManager.ALIGNMENT_CENTER
-        binding.thumbnailCarousel.layoutManager = carouselLayoutManager
+        binding.thumbnailCarousel.layoutManager = layoutManager
         binding.thumbnailCarousel.adapter = ThumbnailCarouselAdapter(this, documents)
 
-        // Attach a SnapHelper to center items
-//        val snapHelper = CarouselSnapHelper()
-//        snapHelper.attachToRecyclerView(binding.thumbnailCarousel)
+        thumbnailSnapHelper = LinearSnapHelper() // Use LinearSnapHelper for LinearLayoutManager
+        thumbnailSnapHelper.attachToRecyclerView(binding.thumbnailCarousel)
+
+        val screenWidth = resources.displayMetrics.widthPixels
+        val thumbnailWidth  = resources.getDimensionPixelSize(R.dimen.thumbnail_width)
+        val padding = (screenWidth - thumbnailWidth) / 2
+        binding.thumbnailCarousel.setPadding(padding, 0, padding, 0)
+        binding.thumbnailCarousel.clipToPadding = false
 
         binding.thumbnailCarousel.addOnScrollListener(object : RecyclerView.OnScrollListener() {
 
@@ -890,8 +1055,22 @@ class DocumentScannerActivity : AppCompatActivity() {
                 super.onScrollStateChanged(recyclerView, newState)
 
                 if (newState == RecyclerView.SCROLL_STATE_IDLE) {
-                    Log.d("FROM ANDROID", "SCROLLED TO position")
-                    (recyclerView.adapter as ThumbnailCarouselAdapter).notifyDataSetChanged()
+
+                    val snapView = thumbnailSnapHelper.findSnapView(layoutManager) ?: return
+                    val position = layoutManager.getPosition(snapView)
+
+                    // Scroll the preview carousel to the same position
+                    scrollPreviewCarouselToPosition(position)
+//                    Log.d("FROM ANDROID", "SCROLLED TO position")
+//
+//                    val centerView = snapHelper.findSnapView(carouselLayoutManager)
+//                    centerView?.let {
+//                        val centeredPosition = carouselLayoutManager.getPosition(it)
+//                        // You can now use centeredPosition as your "selected" index
+//                        // For example, update your adapter or UI accordingly:
+//                        updateSelectedThumbnail(centeredPosition)
+//                    }
+//                    (recyclerView.adapter as ThumbnailCarouselAdapter).notifyDataSetChanged()
 //                    val snapView = snapHelper.findSnapView(layoutManager)
 //
 //                    if (snapView != null) {
@@ -925,13 +1104,16 @@ class DocumentScannerActivity : AppCompatActivity() {
 
         inner class PreviewViewHolder(val binding: PreviewCarouselBinding) : RecyclerView.ViewHolder(binding.root) {
             fun bind(document: Document) {
+                val imageSize = 500
                 if (document.croppedPhotoUri != null) {
                     Glide.with(context)
                         .load(document.croppedPhotoUri)
+                        // .override(imageSize, imageSize)
                         .into(binding.imageView)
                 } else {
                     Glide.with(context)
                         .load(document.originalPhotoFilePath)
+                        //.override(imageSize, imageSize)
                         .into(binding.imageView)
                 }
             }
@@ -982,13 +1164,16 @@ class DocumentScannerActivity : AppCompatActivity() {
                             .load(document.originalPhotoFilePath)
                             .into(binding.imageView)
                     }
+                    binding.addPageText.isVisible = false
                     binding.imageView.setOnClickListener {
                         // Handle adding new image action
                         scrollPreviewCarouselToPosition(position)
+
                     }
                 } else {
-                    Log.e("FROM ANDROID", "" + maxNumDocuments + " --> " + images.count());
+                    Log.e("FROM ANDROID", "hhhh" + maxNumDocuments + " --> " + images.count());
                     binding.imageView.isVisible = maxNumDocuments > images.count()
+                    binding.addPageText.isVisible = maxNumDocuments > images.count()
 
                     binding.imageView.setImageResource(R.drawable.ic_add)
                     binding.thumbnailCard.strokeWidth = 2
@@ -997,6 +1182,11 @@ class DocumentScannerActivity : AppCompatActivity() {
                     binding.thumbnailCard.scaleY = 0.85f
 //                    binding.imageView.setStrokeColorResource(R.color.lightGray)
 //                    binding.imageView.setStrokeWidthResource(R.dimen.thumbnail_stroke_width)
+                    Log.e("add page","add page");
+                    binding.addPageText.setText("Add page")
+                    //    binding.addPageText.isVisible = true
+                    binding.addPageText.setPadding(0, 5, 0, 0)
+                    Log.e("From Android", "${binding.addPageText.isVisible}" );
                     binding.imageView.setOnClickListener {
                         // Handle adding new image action
                         addNewImage()
@@ -1007,9 +1197,41 @@ class DocumentScannerActivity : AppCompatActivity() {
     }
 
     // Helper method to handle adding a new image
+//    private fun addNewImage() {
+//        // Logic for adding a new image (e.g., opening gallery or camera picker)
+//        Log.e("FROM ANDROID", "8")
+//        openDocumentProvider(DocumentScannerAction.ADD)
+//        Log.d("From android","${focusedPosition}")
+//        scrollPreviewCarouselToPosition(focusedPosition)
+//    }
     private fun addNewImage() {
         // Logic for adding a new image (e.g., opening gallery or camera picker)
-        Log.e("FROM ANDROID", "8")
+        Log.e("FROM ANDROID", "Adding new image")
         openDocumentProvider(DocumentScannerAction.ADD)
+
+//        // After adding the new image, update the focusedPosition to the last item
+//        focusedPosition = documents.size -1
+//
+//        Log.e("from Android","${focusedPosition}");
+//
+//        // Notify the adapter that the data has changed
+//        binding.thumbnailCarousel.adapter?.notifyDataSetChanged()
+//
+//
+//        // Scroll the thumbnail carousel to the newly added image
+//        binding.thumbnailCarousel.smoothScrollToPosition(focusedPosition)
+//
+//        // Force a snap to center after scrolling
+//        binding.thumbnailCarousel.post {
+//            val layoutManager = binding.thumbnailCarousel.layoutManager as LinearLayoutManager
+//            val snapView = thumbnailSnapHelper.findSnapView(layoutManager)
+//            if (snapView != null) {
+//                val position = layoutManager.getPosition(snapView)
+//                if (position != focusedPosition) {
+//                    // If the item is not centered, scroll again to ensure it snaps to the center
+//                    binding.thumbnailCarousel.smoothScrollToPosition(focusedPosition)
+//                }
+//            }
+//        }
     }
 }

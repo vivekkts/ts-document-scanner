@@ -17,6 +17,7 @@ buildscript {
 rootProject.allprojects {
     repositories {
         google()
+        maven { url "https://jitpack.io" }
         mavenCentral()
     }
 }
@@ -69,5 +70,9 @@ dependencies {
 
     // ConstraintLayout for layouts
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+
+
+    //for adding zoom
+    implementation 'com.github.chrisbanes:PhotoView:2.3.0'
 
 }
