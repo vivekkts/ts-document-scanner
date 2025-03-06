@@ -5,21 +5,15 @@
     android:id="@+id/preview_carousel"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:layout_marginStart="8dp"
-    android:layout_marginEnd="8dp"
     android:foreground="?attr/selectableItemBackground"
     app:shapeAppearance="?attr/shapeAppearanceCornerExtraSmall"
-    android:layout_gravity="center_horizontal"
-    app:layout_anchorGravity="center_horizontal"
     >
-    <!-- Main ImageView to Show Selected Image -->
-    <ImageView
-        android:id="@+id/image_view"
-        android:layout_width="wrap_content"
-        android:layout_height="match_parent"
-        android:layout_gravity="center_horizontal"
 
-        android:contentDescription="TODO"
+    <com.github.chrisbanes.photoview.PhotoView
+        android:id="@+id/image_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
         android:scaleType="fitCenter"
-        android:src="@drawable/ic_placeholder"/>
+        android:contentDescription="TODO"
+        android:src="@drawable/ic_placeholder" />
 </com.google.android.material.carousel.MaskableFrameLayout>

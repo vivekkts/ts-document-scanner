@@ -40,12 +40,12 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/document_scanner/ios/WeScan-3.0.0"
 
 SPEC CHECKSUMS:
-  camera_avfoundation: dd002b0330f4981e1bbcb46ae9b62829237459a4
-  document_scanner: 7b3ae61ae4b918875530cf4934b0422438fce2c7
+  camera_avfoundation: 04b44aeb14070126c6529e5ab82cc7c9fca107cf
+  document_scanner: 369514c1e4973be38371dff9e05ddfe0915318e5
   Flutter: e0871f40cf51350855a761d2e70bf5af5b9b5de7
-  flutter_pdfview: 2e4d13ffb774858562ffbdfdb61b40744b191adc
-  path_provider_foundation: 2b6b4c569c0fb62ec74538f866245ac84301af46
-  permission_handler_apple: 9878588469a2b0d0fc1e048d9f43605f92e6cec2
+  flutter_pdfview: 32bf27bda6fd85b9dd2c09628a824df5081246cf
+  path_provider_foundation: 080d55be775b7414fd5a5ef3ac137b97b097e564
+  permission_handler_apple: 4ed2196e43d0651e8ff7ca3483a069d469701f2d
   WeScan: f50277f7304d146d9ebc4ebdc1b587df84dcdd8b
 
 PODFILE CHECKSUM: c571282ffe6e0b7e21ee8b1c3fb413ef95fc68cc

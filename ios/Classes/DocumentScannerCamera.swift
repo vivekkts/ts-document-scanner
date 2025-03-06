@@ -6,12 +6,24 @@ struct DocumentScannerCameraView: View {
     @State private var capturedImage: UIImage?
     @State private var capturedQuad: Quadrilateral?
     @State private var isTorchOn = false
+    @State private var showAlert = false
     
     var onImageCaptured: ((UIImage, UIImage, Quadrilateral?) -> Void)?
     var onImageCaptureCancelled: (() -> Void)?
+    var onDismiss: (() -> Void)?
     
     @Environment(\.dismiss) private var dismiss
-        
+
+       init(
+             onImageCaptured: ((UIImage, UIImage, Quadrilateral?) -> Void)? = nil,
+             onImageCaptureCancelled: (() -> Void)? = nil,
+             onDismiss: (() -> Void)? = nil
+         ) {
+             self.onImageCaptured = onImageCaptured
+             self.onImageCaptureCancelled = onImageCaptureCancelled
+             self.onDismiss = onDismiss
+         }
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -48,15 +60,20 @@ struct DocumentScannerCameraView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button(action: {
-                        if let onImageCaptureCancelled = onImageCaptureCancelled {
-                            onImageCaptureCancelled()
-                        }
-                        dismiss()
+                     showAlert = true
                     }) {
                         Image(systemName: "xmark")
                             .font(.system(size: 18, weight: .bold))
                             .foregroundColor(.white)
-                    }
+                    }.alert("Discard Documents?", isPresented: $showAlert) {
+                                                               Button("Keep editing", role: .cancel) { } // Do nothing on cancel
+                                                               Button("Discard", role: .destructive) {
+                                                                   dismiss() // Dismiss the view if user confirms
+                                                               }
+                                                           } message: {
+                                                               Text("If you leave now, Your progress will be lost.")
+                                                           }
+
                 }
                 
                 ToolbarItem(placement: .principal) {
@@ -76,16 +93,33 @@ struct DocumentScannerCameraView: View {
             }
             .background(.black)
             .navigationDestination(isPresented: $showImageEditor) {
-                DocumentScannerPreviewView(
-                    image: $capturedImage,
-                    quad: $capturedQuad
-                ) {
-                    originalImage, editedImage, quad in
-                    if let onImageCaptured = onImageCaptured {
-                        onImageCaptured(originalImage, editedImage, quad)
-                    }
-                    dismiss()
-                }
+//                DocumentScannerPreviewView(
+//                    image: $capturedImage,
+//                    quad: $capturedQuad
+//                ) {
+//                    originalImage, editedImage, quad in
+//                    if let onImageCaptured = onImageCaptured {
+//                        onImageCaptured(originalImage, editedImage, quad)
+//                    }
+//                    print("Calling onDismiss in DocumentScannerCameraView")
+//                     onDismiss?()
+//                    dismiss()
+//                }
+DocumentScannerPreviewView(
+        image: $capturedImage,
+        quad: $capturedQuad,
+        onImageEdited: { originalImage, editedImage, quad in
+            if let onImageCaptured = onImageCaptured {
+                onImageCaptured(originalImage, editedImage, quad)
+            }
+            dismiss()
+        },
+        onDismiss: {
+            print("Calling onDismiss in DocumentScannerCameraView")
+            onDismiss?() // Call the onDismiss handler
+            dismiss()
+        }
+    )
             }
         }
     }
@@ -111,7 +145,7 @@ struct CameraView: UIViewControllerRepresentable {
     var onCaptureSuccess: ((UIImage, Quadrilateral?) -> Void)?
     var onCaptureFail: ((Error) -> Void)?
     var isTorchOn: Bool
-    
+
     func makeCoordinator() -> Coordinator {
         return Coordinator(parent: self)
     }
