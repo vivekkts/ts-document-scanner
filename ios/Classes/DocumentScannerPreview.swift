@@ -64,11 +64,18 @@ struct DocumentScannerPreviewView: View {
                                       }
                 }
                 
-                ToolbarItem(placement: .principal) {
-                    Text("Crop & Rotate")
-                        .font(.title2)
-                        .foregroundStyle(.white)
-                }
+//                ToolbarItem(placement: .principal) {
+//                    Text("Crop & Rotate")
+//                        .font(.title2)
+//                        .foregroundStyle(.white)
+//                }
+ToolbarItem(placement: .principal) {
+    Text("Crop & Rotate")
+        .font(.title2)
+        .foregroundColor(.white)
+        .minimumScaleFactor(0.5) // Shrinks text if space is limited
+        .lineLimit(1) // Ensures the text stays on one line
+}
             }
         }
         .navigationBarBackButtonHidden()
