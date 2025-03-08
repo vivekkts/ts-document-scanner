@@ -42,7 +42,6 @@ struct DocumentScannerHome: View {
     @State private var showGallery: Bool = false
     @State private var hasSelectedImage: Bool = false
     @State private var showAlert = false
-    @State private var showDelete = false
 //    var onSaveToPDF: ((URL) -> Void)?
    // var onSave: (([String])->Void)?
     var onSave: (([String], String) -> Void)?
@@ -138,7 +137,7 @@ if images.count > 0 {
         TextField("Enter name", text: $tempName)
         Button("OK") {
             name = tempName
-        }.disabled(tempName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        }
         Button("Cancel", role: .cancel) { }
     } message: {
         Text("Enter a name for the document")
@@ -257,17 +256,8 @@ if images.count > 0 {
                 }
 
                 TabButton(icon: "trash", label: "Delete") {
-                     showDelete = true
-                }.alert("Delete Image?", isPresented: $showDelete) {
-                             Button("Cancel", role: .cancel) {
-
-                             } // Do nothing, just dismiss
-                             Button("Delete", role: .destructive) {
-                                 deleteImageAtIndex(selectedIndex) // Call delete function if confirmed
-                             }
-                         } message: {
-                             Text("Are you sure you want to delete this image?")
-                         }
+                    deleteImageAtIndex(selectedIndex)
+                }
             }
             .frame(minWidth: 0, maxWidth: .infinity)
             .padding(.top, 12)
