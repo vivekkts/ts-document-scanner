@@ -84,6 +84,7 @@ struct DocumentScannerCameraView: View {
                 
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(action: {
+                        isTorchOn.toggle()
                         NotificationCenter.default.post(name: .toggleFlash, object: nil)
                     }) {
                         Image(systemName: isTorchOn ? "bolt.fill" : "bolt.slash.fill")
@@ -138,9 +139,27 @@ struct CameraView: UIViewControllerRepresentable {
         }
 
         func captureImageSuccess(image: UIImage, withQuad quad: Quadrilateral?) {
-            parent.onCaptureSuccess?(image, quad)
+             let imageSize = parent.calculateImageSize(image) // Calculate size
+                   print("Captured Image Size: \(imageSize) KB (\(String(format: "%.2f", Double(imageSize) / 1024.0)) MB)")
+
+
+        let compressedImage = compressImage(image: image, quality: 0.5)
+         let imageSize3 = parent.calculateImageSize(compressedImage) // Cal
+         print("Captured Image Size: \(imageSize3) KB (\(String(format: "%.2f", Double(imageSize3) / 1024.0)) MB)")
+
+            parent.onCaptureSuccess?(compressedImage, quad)
+        }
+
+        // Function to compress the image
+        func compressImage(image: UIImage, quality: CGFloat) -> UIImage {
+            guard let imageData = image.jpegData(compressionQuality: quality),
+                  let compressedImage = UIImage(data: imageData) else {
+                return image // Return original if compression fails
+            }
+            return compressedImage
         }
     }
+
 
     var onCaptureSuccess: ((UIImage, Quadrilateral?) -> Void)?
     var onCaptureFail: ((Error) -> Void)?
@@ -167,8 +186,13 @@ struct CameraView: UIViewControllerRepresentable {
 
     func updateUIViewController(_ uiViewController: CameraScannerViewController, context: Context) {
         // Update the view controller as needed
-        
+
     }
+      /// **Calculate Image Size in KB**
+        func calculateImageSize(_ image: UIImage) -> Int {
+            guard let imageData = image.jpegData(compressionQuality: 1.0) else { return 0 }
+            return imageData.count / 1024 // Convert bytes to KB
+        }
 }
 
 struct ImageEditorView: View {
