@@ -64,11 +64,18 @@ struct DocumentScannerPreviewView: View {
                                       }
                 }
                 
-                ToolbarItem(placement: .principal) {
-                    Text("Crop & Rotate")
-                        .font(.title2)
-                        .foregroundStyle(.white)
-                }
+//                ToolbarItem(placement: .principal) {
+//                    Text("Crop & Rotate")
+//                        .font(.title2)
+//                        .foregroundStyle(.white)
+//                }
+ToolbarItem(placement: .principal) {
+    Text("Crop & Rotate")
+        .font(.title2)
+        .foregroundColor(.white)
+        .minimumScaleFactor(0.5) // Shrinks text if space is limited
+        .lineLimit(1) // Ensures the text stays on one line
+}
             }
         }
         .navigationBarBackButtonHidden()
@@ -76,7 +83,7 @@ struct DocumentScannerPreviewView: View {
           hasProcessedImage = false
         }
     }
-    
+
     private func actionControls(geometry: GeometryProxy, action: @escaping () -> Void) -> some View {
         if #available(iOS 16.0, *) {
             return (
@@ -94,7 +101,7 @@ struct DocumentScannerPreviewView: View {
                     }
                     .frame(minWidth: 0, maxWidth: .infinity)
                     .foregroundColor(Color.gray)
-                    
+
                     Button("Apply", action: action)
                         .padding(EdgeInsets(top: 16, leading: 24, bottom: 16, trailing: 24))
                         .background(Color(.sRGB, red: 170/255, green: 196/255, blue: 248/255))
@@ -123,7 +130,7 @@ struct DocumentScannerPreviewView: View {
                     }
                     .frame(minWidth: 0, maxWidth: .infinity)
                     .foregroundColor(Color.gray)
-                    
+
                     Button("Apply", action: action)
                         .padding(EdgeInsets(top: 16, leading: 24, bottom: 16, trailing: 24))
                         .background(Color.blue)
@@ -142,7 +149,7 @@ struct ActionButton: View {
     let icon: String
     let label: String
     let action: () -> Void
-    
+
     var body: some View {
         VStack {
             Button(action: action) {
@@ -161,11 +168,11 @@ struct EditImageViewControllerWrapper: UIViewControllerRepresentable {
     @Binding var image: UIImage?
     @Binding var quad: Quadrilateral?
     var onCropped: (UIImage, Quadrilateral?) -> Void
-    
+
     func makeCoordinator() -> Coordinator {
         Coordinator(self, onCropped: onCropped)
     }
-    
+
     func makeUIViewController(context: Context) -> WeScan.EditImageViewController {
         let controller = WeScan.EditImageViewController(
             image: image!,
@@ -174,7 +181,7 @@ struct EditImageViewControllerWrapper: UIViewControllerRepresentable {
             strokeColor: Color(.white).cgColor
         )
         controller.delegate = context.coordinator
-        
+
         NotificationCenter.default.addObserver(forName: .cropImage, object: nil, queue: .main) { _ in
             controller.cropImage()
         }
@@ -187,21 +194,21 @@ struct EditImageViewControllerWrapper: UIViewControllerRepresentable {
         NotificationCenter.default.addObserver(forName: .autoCrop, object: nil, queue: .main) { _ in
             controller.detectQuad()
         }
-        
+
         return controller
     }
-    
+
     func updateUIViewController(_ uiViewController: WeScan.EditImageViewController, context: Context) {}
-    
+
     class Coordinator: NSObject, EditImageViewDelegate {
         var parent: EditImageViewControllerWrapper
         var onCropped: (UIImage, Quadrilateral?) -> Void
-        
+
         init(_ parent: EditImageViewControllerWrapper, onCropped: @escaping (UIImage, Quadrilateral?) -> Void) {
             self.parent = parent
             self.onCropped = onCropped
         }
-        
+
         func cropped(image: UIImage, quad: Quadrilateral?) {
             onCropped(image, quad)
         }
