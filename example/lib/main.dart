@@ -3,7 +3,10 @@ import 'package:document_scanner_example/sample.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:document_scanner/document_scanner.dart';
-
+import 'package:flutter_pdfview/flutter_pdfview.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
 void main() {
   runApp(const MyApp());
 }
@@ -18,6 +21,7 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   List<String> _pictures = [];
   String _filename = "";
+  String _pdfPath = "";
 
   @override
   void initState() {
@@ -50,7 +54,25 @@ class _MyAppState extends State<MyApp> {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ),
-            for (var picture in _pictures) Image.file(File(picture))
+            for (var picture in _pictures) Image.file(File(picture)),
+            if (_pdfPath.isNotEmpty) ...[
+              const Padding(
+                padding: EdgeInsets.all(8.0),
+                child: Text("Generated PDF",
+                    style:
+                    TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              ),
+              SizedBox(
+                height: 400,
+                child: PDFView(
+                  filePath: _pdfPath,
+                  enableSwipe: true,
+                  autoSpacing: true,
+                  swipeHorizontal: true,
+                  fitPolicy: FitPolicy.BOTH,
+                ),
+              ),
+            ],
           ],
         )),
       ),
@@ -87,8 +109,6 @@ class _MyAppState extends State<MyApp> {
       print("Exception occurred: $exception");
     }
   }
-
-
   void onPressed() async {
     List<String> pictures;
     try {
@@ -97,6 +117,14 @@ class _MyAppState extends State<MyApp> {
       if(result != null && result is Map<String, dynamic>) {
       final pictures = result['croppedImageResults'] as List<String>;
       final filename = result['filename'] as String;
+      if (pictures.isNotEmpty) {
+        final pdfPath = await _generatePdfFromImages(pictures);
+        if (!mounted) return;
+        setState(() {
+          _pictures = pictures;
+          _pdfPath = pdfPath;
+        });
+      }
 
       print("Cropped images: $pictures");
       print("Filename: $filename");
@@ -117,5 +145,37 @@ class _MyAppState extends State<MyApp> {
     } }catch (exception) {
       // Handle exception here
     }
+  }
+
+
+  Future<String> _generatePdfFromImages(List<String> imagePaths) async {
+    final pdfDoc = pw.Document();
+    for (var imagePath in imagePaths) {
+      final imageFile = File(imagePath);
+      final imageBytes = await imageFile.readAsBytes();
+      final decodedImage = pw.MemoryImage(imageBytes);
+      pdfDoc.addPage(pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        build: (pw.Context context) {
+          return pw.Center(
+            child: pw.Image(decodedImage, fit: pw.BoxFit.contain, dpi: 150.0),
+          );
+        },
+      ));
+    }
+
+    final outputDir = await getApplicationDocumentsDirectory();
+    final pdfFile = File('${outputDir.path}/scanned_document.pdf');
+    await pdfFile.writeAsBytes(await pdfDoc.save());
+    // Get the size of the created PDF
+    final int fileSize = await pdfFile.length();
+    final double fileSizeKB = fileSize / 1024;
+    final double fileSizeMB = fileSizeKB / 1024;
+
+  //  print("PDF created successfully at: $outputPdfPath");
+    print("PDF Size: ${fileSizeKB.toStringAsFixed(2)} KB");
+    print("PDF Size: ${fileSizeMB.toStringAsFixed(2)} MB");
+    print("PDF Saved at: ${pdfFile.path}");
+    return pdfFile.path;
   }
 }
