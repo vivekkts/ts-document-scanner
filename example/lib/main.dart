@@ -158,7 +158,7 @@ class _MyAppState extends State<MyApp> {
         pageFormat: PdfPageFormat.a4,
         build: (pw.Context context) {
           return pw.Center(
-            child: pw.Image(decodedImage, fit: pw.BoxFit.contain, dpi: 150.0),
+            child: pw.Image(decodedImage, fit: pw.BoxFit.contain, dpi: 110.0),
           );
         },
       ));

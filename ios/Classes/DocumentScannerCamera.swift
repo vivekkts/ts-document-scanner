@@ -143,7 +143,7 @@ struct CameraView: UIViewControllerRepresentable {
                    print("Captured Image Size: \(imageSize) KB (\(String(format: "%.2f", Double(imageSize) / 1024.0)) MB)")
 
 
-        let compressedImage = compressImage(image: image, quality: 0.5)
+        let compressedImage = compressImage(image: image, quality: 0.35)
          let imageSize3 = parent.calculateImageSize(compressedImage) // Cal
          print("Captured Image Size: \(imageSize3) KB (\(String(format: "%.2f", Double(imageSize3) / 1024.0)) MB)")
 
