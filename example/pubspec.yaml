@@ -21,6 +21,7 @@ dependencies:
     sdk: flutter
 
   flutter_pdfview: ^1.4.0
+  pdf: ^3.11.1
 
   document_scanner:
     # When depending on this package from a real application you should use:

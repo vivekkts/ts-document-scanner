@@ -60,11 +60,17 @@ class DocumentScanner {
         }
       }
 
-      if (result != null && result is Map) {
-        final croppedImageResults = List<String>.from(result['croppedImageResults'] ?? []);
-        final filename = result['filename'] ?? '';
+        // Handle Android case where result is a list of file paths
 
-        return {'croppedImageResults': croppedImageResults, 'filename': filename};
+
+
+
+      if (result != null ) {
+        List<String> croppedImageResults = List<String>.from(result);
+
+
+        return {'croppedImageResults': croppedImageResults, 'filename': ''};
+
       }
 
       return null;
