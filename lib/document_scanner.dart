@@ -81,7 +81,7 @@ class DocumentScanner {
   }
 
   static Future<Map<String, dynamic>?> selectDocuments(
-      {int noOfPages = 100, List<String>? sharedFiles}) async {
+      {int noOfPages = 100, List<String>? sharedFiles, String documentType = ""}) async {
     Map<Permission, PermissionStatus> statuses;
 
     if (defaultTargetPlatform == TargetPlatform.iOS) {
@@ -95,10 +95,11 @@ class DocumentScanner {
       throw Exception("Permission not granted");
     }
     try {
-
+      print("Level 1 $sharedFiles");
       final result = await _channel.invokeMethod('selectDocuments', {
         'noOfPages': noOfPages,
-        'sharedFiles': sharedFiles
+        'sharedFiles': sharedFiles,
+        'documentType': documentType,
       });
       print("resultant $result");
 
