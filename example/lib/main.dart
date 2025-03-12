@@ -84,7 +84,9 @@ class _MyAppState extends State<MyApp> {
     String? filename;
 
     try {
-      final result = await DocumentScanner.selectDocuments(noOfPages: 15);
+      //final result = await DocumentScanner.selectDocuments(noOfPages: 15);
+       final result = await DocumentScanner.selectDocuments(
+          noOfPages: 15, sharedFiles: [], documentType: "pdf");
       print("resultis, $result");
 
       if (result != null) {

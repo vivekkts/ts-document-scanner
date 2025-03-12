@@ -181,13 +181,16 @@ public class SwiftDocumentScannerPlugin: NSObject, FlutterPlugin, UIApplicationD
 }
 
 extension SwiftDocumentScannerPlugin: UIDocumentPickerDelegate {
-    public func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+ public func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
         var paths: [String] = []
-        
+        var filename: String = ""
+
         let tempDirURL = URL(fileURLWithPath: NSTemporaryDirectory())
         for url in urls {
             if url.startAccessingSecurityScopedResource() {
-                let destinationURL = tempDirURL.appendingPathComponent(url.lastPathComponent)
+                let uniqueFilename = "\(UUID().uuidString)_\(url.lastPathComponent)"
+                filename=url.lastPathComponent
+                let destinationURL = tempDirURL.appendingPathComponent(uniqueFilename)
                 do {
                     try FileManager.default.copyItem(at: url, to: destinationURL)
                     paths.append(destinationURL.path)
@@ -197,11 +200,13 @@ extension SwiftDocumentScannerPlugin: UIDocumentPickerDelegate {
                 url.stopAccessingSecurityScopedResource()
             }
         }
-            
-        
-        self.resultChannel?(["images": paths])
+
+
+        self.resultChannel?(["images": paths,"name":filename])
         self.resultChannel = nil
     }
+
+
 }
 
 
