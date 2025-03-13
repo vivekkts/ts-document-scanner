@@ -10,6 +10,7 @@ struct DocumentScannerPreviewView: View {
     var onImageEdited: ((UIImage, UIImage, Quadrilateral?) -> Void)?
     var onDismiss: (() -> Void)?
     @State private var showAlert = false
+    @State private var isApplyButtonDisabled: Bool = false
     
     @Environment(\.dismiss) private var dismiss
         
@@ -81,11 +82,13 @@ ToolbarItem(placement: .principal) {
         .navigationBarBackButtonHidden()
         .onAppear{
           hasProcessedImage = false
+          isApplyButtonDisabled = false
         }
     }
 
     private func actionControls(geometry: GeometryProxy, action: @escaping () -> Void) -> some View {
         if #available(iOS 16.0, *) {
+        print("greater then 16.0")
             return (
                 VStack(alignment: .trailing, spacing: 16) {
                     HStack {
@@ -102,9 +105,19 @@ ToolbarItem(placement: .principal) {
                     .frame(minWidth: 0, maxWidth: .infinity)
                     .foregroundColor(Color.gray)
 
-                    Button("Apply", action: action)
+                    Button("Apply", action: {
+                     isApplyButtonDisabled = true
+                        DispatchQueue.global(qos: .userInitiated).async {
+                            action()
+
+                            // Update the UI on the main thread (if needed)
+                            DispatchQueue.main.async {
+                                // Perform any UI updates here
+                            }
+                        }})
+                        .disabled(isApplyButtonDisabled)
                         .padding(EdgeInsets(top: 16, leading: 24, bottom: 16, trailing: 24))
-                        .background(Color(.sRGB, red: 170/255, green: 196/255, blue: 248/255))
+                        .background(isApplyButtonDisabled ? Color.gray : Color(.sRGB, red: 170/255, green: 196/255, blue: 248/255))
                         .foregroundColor(.black)
                         .cornerRadius(32)
                         .frame(alignment: .trailing)
@@ -114,6 +127,7 @@ ToolbarItem(placement: .principal) {
                 .clipShape(UnevenRoundedRectangle(cornerRadii: RectangleCornerRadii(topLeading: 24, bottomLeading: 0, bottomTrailing: 0, topTrailing: 24)))
             )
         } else {
+        print("lessa than 16.0")
             // Fallback on earlier versions
             return (
                 VStack {
@@ -131,9 +145,19 @@ ToolbarItem(placement: .principal) {
                     .frame(minWidth: 0, maxWidth: .infinity)
                     .foregroundColor(Color.gray)
 
-                    Button("Apply", action: action)
+                    Button("Apply", action:  {
+                                                                 isApplyButtonDisabled = true
+                                                                     DispatchQueue.global(qos: .userInitiated).async {
+                                                                         action()
+
+                                                                         // Update the UI on the main thread (if needed)
+                                                                         DispatchQueue.main.async {
+                                                                             // Perform any UI updates here
+                                                                         }
+                                                                     }})
+                     .disabled(isApplyButtonDisabled)
                         .padding(EdgeInsets(top: 16, leading: 24, bottom: 16, trailing: 24))
-                        .background(Color.blue)
+                        .background(isApplyButtonDisabled ? Color.gray : Color.blue) //
                         .foregroundColor(.white)
                         .cornerRadius(16)
                 }
