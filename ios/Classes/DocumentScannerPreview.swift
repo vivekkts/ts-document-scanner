@@ -193,11 +193,21 @@ struct EditImageViewControllerWrapper: UIViewControllerRepresentable {
     @Binding var quad: Quadrilateral?
     var onCropped: (UIImage, Quadrilateral?) -> Void
 
+
     func makeCoordinator() -> Coordinator {
         Coordinator(self, onCropped: onCropped)
+//        if coordinator == nil {
+//                   coordinator = Coordinator(self, onCropped: onCropped)
+//                   print("New Coordinator created")
+//               } else {
+//                   print("Reusing existing Coordinator")
+//               }
+//               return coordinator!
     }
 
+
     func makeUIViewController(context: Context) -> WeScan.EditImageViewController {
+
         let controller = WeScan.EditImageViewController(
             image: image!,
             quad: quad,
@@ -205,19 +215,24 @@ struct EditImageViewControllerWrapper: UIViewControllerRepresentable {
             strokeColor: Color(.white).cgColor
         )
         controller.delegate = context.coordinator
+         context.coordinator.controller = controller //
 
-        NotificationCenter.default.addObserver(forName: .cropImage, object: nil, queue: .main) { _ in
-            controller.cropImage()
-        }
-        NotificationCenter.default.addObserver(forName: .rotateImage, object: nil, queue: .main) { _ in
-            controller.rotateImage()
-        }
-        NotificationCenter.default.addObserver(forName: .resetCrop, object: nil, queue: .main) { _ in
-            controller.resetQuadToDefault()
-        }
-        NotificationCenter.default.addObserver(forName: .autoCrop, object: nil, queue: .main) { _ in
-            controller.detectQuad()
-        }
+//        NotificationCenter.default.addObserver(forName: .cropImage, object: nil, queue: .main) { _ in
+//            print("cropping image")
+//            controller.cropImage()
+//        }
+//        NotificationCenter.default.addObserver(forName: .rotateImage, object: nil, queue: .main) { _ in
+//            print("rotate")
+//            controller.rotateImage()
+//        }
+//        NotificationCenter.default.addObserver(forName: .resetCrop, object: nil, queue: .main) { _ in
+//            print("reset")
+//            controller.resetQuadToDefault()
+//        }
+//        NotificationCenter.default.addObserver(forName: .autoCrop, object: nil, queue: .main) { _ in
+//           print("autocrop")
+//            controller.detectQuad()
+//        }
 
         return controller
     }
@@ -227,21 +242,75 @@ struct EditImageViewControllerWrapper: UIViewControllerRepresentable {
     class Coordinator: NSObject, EditImageViewDelegate {
         var parent: EditImageViewControllerWrapper
         var onCropped: (UIImage, Quadrilateral?) -> Void
+        weak var controller: EditImageViewController?
 
-        init(_ parent: EditImageViewControllerWrapper, onCropped: @escaping (UIImage, Quadrilateral?) -> Void) {
+//        init(_ parent: EditImageViewControllerWrapper, onCropped: @escaping (UIImage, Quadrilateral?) -> Void) {
+//            self.parent = parent
+//            self.onCropped = onCropped
+//        }
+init(_ parent: EditImageViewControllerWrapper, onCropped: @escaping (UIImage, Quadrilateral?) -> Void) {
             self.parent = parent
             self.onCropped = onCropped
+            super.init()
+
+            // Register observers in the init method
+            NotificationCenter.default.addObserver(
+                forName: .cropImage,
+                object: nil,
+                queue: .main,
+                using: { [weak self] _ in
+                    print("cropimage")
+                    self?.controller?.cropImage()
+                }
+            )
+            NotificationCenter.default.addObserver(
+                forName: .rotateImage,
+                object: nil,
+                queue: .main,
+                using: { [weak self] _ in
+                    print("rotateimage")
+                    self?.controller?.rotateImage()
+                }
+            )
+            NotificationCenter.default.addObserver(
+                forName: .resetCrop,
+                object: nil,
+                queue: .main,
+                using: { [weak self] _ in
+                    print("resetquad")
+                    self?.controller?.resetQuadToDefault()
+                }
+            )
+            NotificationCenter.default.addObserver(
+                forName: .autoCrop,
+                object: nil,
+                queue: .main,
+                using: { [weak self] _ in
+                    print("autocrop")
+                    self?.controller?.detectQuad()
+                }
+            )
+        }
+
+        deinit {
+            // Remove observers when the Coordinator is deallocated
+            NotificationCenter.default.removeObserver(self, name: .cropImage, object: nil)
+            NotificationCenter.default.removeObserver(self, name: .rotateImage, object: nil)
+            NotificationCenter.default.removeObserver(self, name: .resetCrop, object: nil)
+            NotificationCenter.default.removeObserver(self, name: .autoCrop, object: nil)
+            print("deinitialsied deinitialized")
         }
 
         func cropped(image: UIImage, quad: Quadrilateral?) {
             onCropped(image, quad)
         }
-        deinit {
-                NotificationCenter.default.removeObserver(self, name: .cropImage, object: nil)
-                NotificationCenter.default.removeObserver(self, name: .rotateImage, object: nil)
-                NotificationCenter.default.removeObserver(self, name: .resetCrop, object: nil)
-                NotificationCenter.default.removeObserver(self, name: .autoCrop, object: nil)
-            }
+//        deinit {
+//        print("deinit")
+//                NotificationCenter.default.removeObserver(self, name: .cropImage, object: nil)
+//                NotificationCenter.default.removeObserver(self, name: .rotateImage, object: nil)
+//                NotificationCenter.default.removeObserver(self, name: .resetCrop, object: nil)
+//                NotificationCenter.default.removeObserver(self, name: .autoCrop, object: nil)
+//            }
     }
 }
 
