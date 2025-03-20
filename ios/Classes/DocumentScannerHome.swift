@@ -25,6 +25,7 @@ struct ScannedImage {
 }
 
 struct DocumentScannerHome: View {
+    @State private var showEmptyTextError = false
     @State private var name: String = ""
     @State private var openNameChangeAlert: Bool = false
     @State private var tempName: String = ""
@@ -137,7 +138,11 @@ if images.count > 0 {
     .alert("Rename Document", isPresented: $openNameChangeAlert) {
         TextField("Enter name", text: $tempName)
         Button("OK") {
-            name = tempName
+ let trimmedName = tempName.trimmingCharacters(in: .whitespacesAndNewlines)
+ print(trimmedName)
+        if !trimmedName.isEmpty { // Only update if tempName is not empty
+            name = trimmedName
+        }
         }.disabled(tempName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         Button("Cancel", role: .cancel) { }
     } message: {
@@ -185,6 +190,7 @@ if images.count > 0 {
                 // Page Indicator
                 Text("\(selectedIndex + 1)/\(images.count)")
                     .font(.headline)
+                    .foregroundColor(.white)
                     .padding(.top, 4)
 
                 // Thumbnail List
