@@ -189,7 +189,7 @@ extension SwiftDocumentScannerPlugin: UIDocumentPickerDelegate {
         for url in urls {
             if url.startAccessingSecurityScopedResource() {
                 let uniqueFilename = "\(UUID().uuidString)_\(url.lastPathComponent)"
-                filename=url.lastPathComponent
+                filename=url.deletingPathExtension().lastPathComponent
                 let destinationURL = tempDirURL.appendingPathComponent(uniqueFilename)
                 do {
                     try FileManager.default.copyItem(at: url, to: destinationURL)

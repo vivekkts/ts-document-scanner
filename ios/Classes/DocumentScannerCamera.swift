@@ -85,6 +85,8 @@ struct DocumentScannerCameraView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(action: {
                         isTorchOn.toggle()
+                        print("Torch Toggled: \(isTorchOn)")
+                        print("torch on h")
                         NotificationCenter.default.post(name: .toggleFlash, object: nil)
                     }) {
                         Image(systemName: isTorchOn ? "bolt.fill" : "bolt.slash.fill")
@@ -129,11 +131,18 @@ DocumentScannerPreviewView(
 struct CameraView: UIViewControllerRepresentable {
     class Coordinator: NSObject, CameraScannerViewOutputDelegate {
         let parent: CameraView
+        var cameraViewController: CameraScannerViewController?
 
         init(parent: CameraView) {
             self.parent = parent
         }
 
+        deinit {
+                   // Remove observers when the Coordinator is deallocated
+                   NotificationCenter.default.removeObserver(self, name: .capturePhoto, object: nil)
+                   NotificationCenter.default.removeObserver(self, name: .toggleFlash, object: nil)
+                   print("Coordinator deinitialized")
+               }
         func captureImageFailWithError(error: Error) {
             print("Capture failed with error: \(error)")
         }
@@ -172,14 +181,30 @@ struct CameraView: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> CameraScannerViewController {
         let controller = CameraScannerViewController()
         controller.delegate = context.coordinator
-        
-        NotificationCenter.default.addObserver(forName: .capturePhoto, object: nil, queue: .main) { _ in
-            controller.capture()
-        }
-        
-        NotificationCenter.default.addObserver(forName: .toggleFlash, object: nil, queue: .main) { _ in
-            controller.toggleFlash()
-        }
+        context.coordinator.cameraViewController = controller
+
+
+
+ // Add observers using weak self to avoid retain cycles
+        NotificationCenter.default.addObserver(
+            forName: .capturePhoto,
+            object: nil,
+            queue: .main,
+            using: { [weak controller] _ in
+                controller?.capture()
+            }
+        )
+
+        NotificationCenter.default.addObserver(
+            forName: .toggleFlash,
+            object: nil,
+            queue: .main,
+            using: { [weak controller] _ in
+                controller?.toggleFlash()
+            }
+        )
+
+
         
         return controller
     }
@@ -188,6 +213,11 @@ struct CameraView: UIViewControllerRepresentable {
         // Update the view controller as needed
 
     }
+func dismantleUIViewController(_ uiViewController: CameraScannerViewController, coordinator: Coordinator) {
+    print("dismantling")
+    NotificationCenter.default.removeObserver(NotificationCenter.default, name: .toggleFlash, object: nil)
+    NotificationCenter.default.removeObserver(NotificationCenter.default, name: .capturePhoto, object: nil)
+}
       /// **Calculate Image Size in KB**
         func calculateImageSize(_ image: UIImage) -> Int {
             guard let imageData = image.jpegData(compressionQuality: 1.0) else { return 0 }
