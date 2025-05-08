@@ -160,6 +160,7 @@ final class ReviewViewController: UIViewController {
     }
 
     @objc func rotateImage() {
+    print("rotate in we scan")
         rotationAngle.value += 90
 
         if rotationAngle.value == 360 {
